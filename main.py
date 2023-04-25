@@ -9,7 +9,6 @@ from transformers import (
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
     HfArgumentParser,
-    AutoModelForSequenceClassification,
 )
 from trl import (
     AutoModelForCausalLMWithValueHead,
@@ -21,9 +20,10 @@ from trl import (
 )
 from trl.core import LengthSampler
 
-from data import CKBPPPODataset, collator, get_loader, ASER_RELATIONS_2NL, CS_RELATIONS_2NL
+from data import CKBPPPODataset, collator, get_loader, SPECIAL_TOKENS
 from evaluate import evaluate
 from train import train
+from reward_model import load_reward_model
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -63,7 +63,8 @@ class ScriptArguments(PPOConfig):
     evaluation_data_path: str = 'ckbp_data/ckbp2.0.csv'
     # reward model
     use_rm: bool = False
-    reward_model_id: str = ""
+    reward_model_ptlm: str = "roberta-large"
+    reward_model_saved_path: str = "checkpoints/reward_model-PseudoReasoner/best_model_seed_100.pth"
     # relations
     add_rel_token: bool = True
     use_nl_rel: bool = False
@@ -81,10 +82,7 @@ def main():
     ########################### Load Tokenizer #################################
     tokenizer = AutoTokenizer.from_pretrained(config.model_name)
     if config.add_rel_token:
-        tokenizer.add_special_tokens({
-            'additional_special_tokens':
-                list(CS_RELATIONS_2NL.keys()) + list(ASER_RELATIONS_2NL.keys())
-        })
+        tokenizer.add_special_tokens({'additional_special_tokens': SPECIAL_TOKENS})
     ############################################################################
 
     ########################### Load Data ######################################
@@ -128,9 +126,13 @@ def main():
     )
 
     if config.use_rm:
-        rm_tokenizer = AutoTokenizer.from_pretrained(config.reward_model_id)
-        reward_model = AutoModelForSequenceClassification.from_pretrained(
-            config.reward_model_id, torch_dtype=torch.bfloat16).to(ppo_trainer.accelerator.device)
+        reward_model, rm_tokenizer = load_reward_model(
+            'kgbert',
+            config.reward_model_ptlm,
+            saved_model_path=config.reward_model_saved_path,
+            special_token_list=SPECIAL_TOKENS,
+            device=ppo_trainer.accelerator.device,
+            torch_dtype=torch.bfloat16)
 
         # We then define the arguments to pass to the `generate` function. These arguments
         # are passed to the `generate` function of the PPOTrainer, which is a wrapper around
@@ -141,8 +143,8 @@ def main():
             "do_sample": True,
             "pad_token_id": tokenizer.pad_token_id,
         }
-        output_min_length = 20
-        output_max_length = 30
+        output_min_length = 4
+        output_max_length = 16
         output_length_sampler = LengthSampler(output_min_length, output_max_length)
 
         train(ppo_trainer,

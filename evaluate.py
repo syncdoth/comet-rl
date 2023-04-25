@@ -40,6 +40,7 @@ def evaluate(ppo_trainer, tokenizer, config, eval_dataloader):
                         pad_index=0,
                         pad_first=pad_first)
         # do forward to get logits
+        ppo_trainer.model.eval()
         lm_logits = ppo_trainer.model(**model_inputs)[0]
 
         # setup target sequence
