@@ -1,0 +1,8 @@
+pandas
+torch
+transformers
+trl
+scikit-learn
+tqdm
+wandb
+accelerate
