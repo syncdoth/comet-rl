@@ -112,8 +112,8 @@ class CKBPPPODataset(Dataset):
 
     def __getitem__(self, idx):
         edge = self.edges[idx].tolist()
-        input_ids = self.tokenizer(f"{edge[0]} {edge[2]}", return_tensors='pt').input_ids
-        target_ids = self.tokenizer(edge[1], return_tensors='pt').input_ids
+        input_ids = self.tokenizer(f"{edge[0]} {edge[2]} [GEN]", return_tensors='pt').input_ids
+        target_ids = self.tokenizer(f"{edge[1]} [EOS]", return_tensors='pt').input_ids
 
         item = {
             'input_ids': input_ids,

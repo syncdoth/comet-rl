@@ -80,7 +80,6 @@ def main():
 
     ########################### Load Tokenizer #################################
     tokenizer = AutoTokenizer.from_pretrained(config.model_name)
-    tokenizer.pad_token = tokenizer.eos_token
     if config.add_rel_token:
         tokenizer.add_special_tokens({
             'additional_special_tokens':
@@ -140,7 +139,7 @@ def main():
             "min_length": -1,
             "top_p": 0.95,
             "do_sample": True,
-            "pad_token_id": tokenizer.eos_token_id,
+            "pad_token_id": tokenizer.pad_token_id,
         }
         output_min_length = 20
         output_max_length = 30
