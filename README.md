@@ -58,12 +58,12 @@ pip install bitsandbytes loralib
 1. First, login to [wandb](wandb.ai). `wandb login`.
 
 ```bash
-sh scripts/train-gpt.sh 0,1,2,3 4
+sh scripts/train-gpt.sh 0,1,2,3
 ```
 
-Training bash scripts take 2 arguments: `gpu ids` (0,1,2,3 above) and `number of gpus` (4 above). If you set
-`number of gpus` to 1, it will run using a simple python launcher (`python main.py`).
-If you use multi-gpu, it will automatically use `torchrun` to launch.
+Training bash scripts take `gpu ids` (0,1,2,3 above) as argument. If you use just one GPU,
+it will run using a simple python launcher (`python main.py`). If you use multi-gpu,
+it will automatically use `torchrun` to launch.
 
 * multi-node training is not supported yet.
 

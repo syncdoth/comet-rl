@@ -1,5 +1,6 @@
 ids=$1
-N_GPUS=$2
+arrIDs=(${ids//,/ })
+N_GPUS="${#arrIDs[@]}"
 
 script="main.py \
     --model_name comet_pretrained/comet-atomic_2020_BART \
