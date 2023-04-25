@@ -91,7 +91,8 @@ def compute_reward(ppo_trainer,
     rm_inputs = rm_tokenizer(rm_input_text, padding=True, truncation=True,
                              return_tensors="pt").to(ppo_trainer.accelerator.device)
     logits = reward_model(rm_inputs).float()
-    labels = (logits[:, attribute_idx]).tolist()
+    probs = torch.softmax(logits, dim=-1)
+    labels = (probs[:, attribute_idx]).tolist()
 
     rewards = [torch.tensor(output) for output in labels]
 
