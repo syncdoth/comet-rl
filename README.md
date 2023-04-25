@@ -55,6 +55,8 @@ pip install bitsandbytes loralib
 
 ## Run experiments
 
+1. First, login to [wandb](wandb.ai). `wandb login`.
+
 ```bash
 sh scripts/train-gpt.sh 0,1,2,3 4
 ```
