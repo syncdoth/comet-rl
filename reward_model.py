@@ -83,3 +83,45 @@ def load_reward_model(model_type,
         model.load_state_dict(torch.load(saved_model_path))
 
     return model, tokenizer
+
+
+def compute_reward(ppo_trainer,
+                   tokenizer,
+                   rm_tokenizer,
+                   reward_model,
+                   generation_kwargs,
+                   output_length_sampler,
+                   query_tensors,
+                   attribute_idx=1):
+    response_tensors = []
+    heads = []
+    relations = []
+    for query in query_tensors:
+        # generate responses (tails)
+        gen_len = output_length_sampler()
+        generation_kwargs["max_new_tokens"] = gen_len
+        response = ppo_trainer.generate(query, **generation_kwargs)
+        response_tensors.append(response.squeeze()[-gen_len:])
+        # query to head + relation text
+        # skip_special_tokens skips [GEN] token
+        query_text = tokenizer.decode(query, skip_special_tokens=True).split(' ')
+        heads.append(' '.join(query_text[:-1]))
+        relations.append(query_text[-1])
+    # skip_special_tokens skip [EOS] token
+    responses = [tokenizer.decode(r.squeeze(), skip_special_tokens=True) for r in response_tensors]
+
+    rm_input_text = [
+        h + rm_tokenizer.sep_token + r + rm_tokenizer.sep_token + t
+        for h, r, t in zip(heads, relations, responses)
+    ]
+
+    # Compute sentiment score # noqa
+    rm_inputs = rm_tokenizer(rm_input_text, padding=True, truncation=True,
+                             return_tensors="pt").to(ppo_trainer.accelerator.device)
+    logits = reward_model(rm_inputs).float()
+    probs = torch.softmax(logits, dim=-1)
+    labels = (probs[:, attribute_idx]).tolist()
+
+    rewards = [torch.tensor(output) for output in labels]
+
+    return response_tensors, responses, rewards
